@@ -157,8 +157,10 @@ fun main(args: Array<String>) {
     Config.Init(args[0])
     Config.print()
 
-    val client =
-        OkHttpClient.Builder().proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress("77.94.144.164", 3128))).build()
+    val client = OkHttpClient.Builder().build()
+
+    //val client =
+    //        OkHttpClient.Builder().proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress("77.94.144.164", 3128))).build()
     val bot = TelegramBot.Builder(Config[Config.bot_key]).okHttpClient(client).build()
 
     DbManager.Init()
