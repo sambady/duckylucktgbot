@@ -180,11 +180,7 @@ fun main(args: Array<String>) {
             try {
                 val userState = UserState.getState(userName)
                 if (text == "/start") {
-                    if(DbManager.tryAddUser(userName)) {
-                        for (i in 1..15) {
-                            DbManager.tryAddUser("${userName}_${i}")
-                        }
-                    }
+                    DbManager.tryAddUser(userName)
                     UserState.clearUserState(userName)
                     MainMenu.sendToUser(chatId, userName, bot)
                 } else if (userState == UserState.State.None) {
