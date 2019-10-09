@@ -124,7 +124,9 @@ object MainMenu
             bot.execute(SendMessage(chatId, "Balance ${DbManager.getBalance(userName)}"))
         }),
         Action("My log", { chatId, userName, bot ->
-            val operationList = DbManager.getOperationList(userName).joinToString("\n")
+            val operationList = DbManager.getOperationList(userName).map {
+                "${if(it.notAMaster) "+" else "-"} ${it.target} - ${it.sum}"
+            }
             bot.execute(SendMessage(chatId, "Log:\n${operationList}"))
         })
     )

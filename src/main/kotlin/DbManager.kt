@@ -141,9 +141,16 @@ object DbManager {
         return balance
     }
 
-    fun getOperationList(userName: String): List<String> {
+    data class LogOperation(
+        val notAMaster : Boolean,
+        val target : String,
+        val sum : Int,
+        val comment : String
+    )
+
+    fun getOperationList(userName: String): List<LogOperation> {
         connect()
-        var operations = mutableListOf<String>()
+        var operations = mutableListOf<LogOperation>()
         transaction {
             val operatorId = Users.select({ Users.name eq userName })
                 .map { it[Users.id].toInt() }
@@ -159,8 +166,19 @@ object DbManager {
                 .slice(Logs.id, masterNameTable[Users.name], slaveNameTable[Users.name], Logs.sum, Logs.commentMessage)
                 .selectAll()
                 .orderBy(Logs.id to SortOrder.DESC)
-                .limit(5)
-                .map {"${it[masterNameTable[Users.name]]} -> ${it[slaveNameTable[Users.name]]} ${it[Logs.sum]} - ${it[Logs.commentMessage]} ".toString() }
+                .limit(Config[Config.log_limit])
+                .map { LogOperation(
+                    notAMaster = (userName != it[masterNameTable[Users.name]]),
+                    target =    if(userName == it[masterNameTable[Users.name]]) {
+                                    it[slaveNameTable[Users.name]]
+                                }
+                                else {
+                                    it[masterNameTable[Users.name]]
+                                },
+                    sum = it[Logs.sum],
+                    comment = it[Logs.commentMessage]
+                    )}
+                //.map {"${it[masterNameTable[Users.name]]} -> ${it[slaveNameTable[Users.name]]} ${it[Logs.sum]} - ${it[Logs.commentMessage]} ".toString() }
                 .toMutableList()
         }
         return operations

@@ -16,6 +16,7 @@ object Config : Configuration {
     val db_driver = Key("db.driver", stringType)
     val db_username = Key("db.username", stringType)
     val db_password = Key("db.password", stringType)
+    val log_limit = Key("log_limit", intType)
 
     fun Init(fileName : String) {
         config = ConfigurationProperties.fromFile(File(fileName))
