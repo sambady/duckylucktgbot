@@ -176,7 +176,6 @@ fun main(args: Array<String>) {
             val userName = chat?.username() ?: return@forEach
             val text = it?.message()?.text() ?: return@forEach
 
-            println(chatId.toString() + " " + text)
             try {
                 val userState = UserState.getState(userName)
                 if (text == "/start") {
