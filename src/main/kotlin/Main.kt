@@ -125,7 +125,7 @@ object MainMenu
         }),
         Action("My log", { chatId, userName, bot ->
             val operationList = DbManager.getOperationList(userName).map {
-                "${it.target} : ${if(it.notAMaster) "+" else "-"}${it.sum} - ${it.comment}"
+                "${it.target} : ${if(it.notAMaster) "-" else "+"}${it.sum} - ${it.comment}"
             }.joinToString("\n")
             bot.execute(SendMessage(chatId, "Log:\n${operationList}"))
         })
