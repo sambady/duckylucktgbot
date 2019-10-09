@@ -149,6 +149,12 @@ object MainMenu
 
 fun main(args: Array<String>) {
 
+    if(args.isEmpty()) {
+        println("First arg is config file");
+        return;
+    }
+
+    Config.Init(args[0])
     Config.print()
 
     val client =

@@ -9,7 +9,7 @@ object Config : Configuration {
     override fun locationOf(key: Key<*>): PropertyLocation? = config.locationOf(key)
     override fun searchPath(key: Key<*>): List<PropertyLocation> = config.searchPath(key)
 
-    val config : Configuration
+    lateinit var config : Configuration
 
     val bot_key = Key("bot.key", stringType)
     val db_url = Key("db.url", stringType)
@@ -17,8 +17,8 @@ object Config : Configuration {
     val db_username = Key("db.username", stringType)
     val db_password = Key("db.password", stringType)
 
-    init {
-        config = ConfigurationProperties.fromFile(File("./config.txt"))
+    fun Init(fileName : String) {
+        config = ConfigurationProperties.fromFile(File(fileName))
     }
 
     fun print() {
