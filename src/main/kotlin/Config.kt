@@ -1,4 +1,4 @@
-package DuckLuckTgBot
+package DuckyLuckTgBot
 
 import com.natpryce.konfig.*
 import java.io.File

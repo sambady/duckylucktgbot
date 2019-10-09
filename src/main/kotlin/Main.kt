@@ -1,4 +1,4 @@
-package DuckLuckTgBot
+package DuckyLuckTgBot
 
 
 import com.pengrad.telegrambot.TelegramBot
