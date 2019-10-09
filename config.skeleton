@@ -1,0 +1,5 @@
+bot.key=<telegram_bot_key>
+db.url=jdbc:mysql://localhost:3306/<schema_name>?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+db.driver=com.mysql.cj.jdbc.Driver
+db.username=<login>
+db.password=<password>
