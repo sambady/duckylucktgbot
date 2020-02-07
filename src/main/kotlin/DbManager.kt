@@ -123,7 +123,7 @@ object DbManager {
             ret = "${lastLog[masterNameTable[Users.name]]} -> ${lastLog[slaveNameTable[Users.name]]} : ${lastLog[Logs.sum]} - $commentString"
 
             Logs.update({ Logs.id eq lastLog[Logs.id] }) {
-                it[Logs.commentMessage] = commentString
+                it[Logs.commentMessage] = String(commentString.toByteArray(), Charsets.UTF_8)
             }
         }
         return ret
@@ -164,7 +164,7 @@ object DbManager {
                 .innerJoin(masterNameTable, {Logs.master}, { masterNameTable[Users.id] })
                 .innerJoin(slaveNameTable, {Logs.slave}, { slaveNameTable[Users.id] })
                 .slice(Logs.id, masterNameTable[Users.name], slaveNameTable[Users.name], Logs.sum, Logs.commentMessage)
-                .selectAll()
+                .select({ Logs.operator eq operatorId })
                 .orderBy(Logs.id to SortOrder.DESC)
                 .limit(Config[Config.log_limit])
                 .map { LogOperation(
