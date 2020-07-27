@@ -40,8 +40,10 @@ object UserState {
         return true
     }
 
-    fun trySetCount(userName : String, text : String) : String  {
+    fun trySetCount(userName : String, text : String) : Pair<String, Boolean>  {
         val state = statesByUsername.get(userName) ?: throw MyException("State for $userName not found")
+
+        var isEnd = false
 
         if(text == "<<") {
             if(state.count.isNotEmpty()) {
@@ -50,11 +52,17 @@ object UserState {
         }
         else {
             if(text.toIntOrNull() != null) {
-                state.count = state.count + text
+                if(text.length > 1) {
+                    state.count = text
+                    isEnd = true
+                }
+                else {
+                    state.count = state.count + text
+                }
             }
         }
 
-        return state.count
+        return Pair(state.count, isEnd)
     }
 
     fun setState(chatId : Long, userName : String, bot : TelegramBot, newState : State) {
@@ -199,7 +207,12 @@ fun main(args: Array<String>) {
                     }
                     else {
                         val count = UserState.trySetCount(userName, text)
-                        bot.execute(SendMessage(chatId, count))
+                        if(count.second) {
+                            UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
+                        }
+                        else {
+                            bot.execute(SendMessage(chatId, count.first))
+                        }
                     }
                 } else if (userState == UserState.State.WaitComment) {
                     if (text.isNotEmpty()) {
