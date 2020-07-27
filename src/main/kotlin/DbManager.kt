@@ -94,7 +94,6 @@ object DbManager {
                 it[Logs.master] = masterId
                 it[Logs.slave] = slaveId
                 it[Logs.sum] = sum
-                println("Data now ${DateTime.now()}")
                 it[Logs.operationTime] = DateTime.now()
             }
         }
