@@ -79,7 +79,7 @@ object UserState {
                 isSelective = true
             )
 
-            bot.execute(SendMessage(chatId, "Select target:").replyMarkup(replyKeyboard))
+            bot.execute(SendMessage(chatId, "О ком речь?").replyMarkup(replyKeyboard))
         }
         else if(newState == State.WaitCount) {
             val state = statesByUsername.get(userName) ?: throw MyException("Try set state to $newState but state record not found")
@@ -94,7 +94,7 @@ object UserState {
                 )
             )
 
-            bot.execute(SendMessage(chatId, "Please enter count:").replyMarkup(replyKeyboard))
+            bot.execute(SendMessage(chatId, "И сколько?").replyMarkup(replyKeyboard))
         }
         else if(newState == State.WaitComment) {
             val state = statesByUsername.get(userName) ?: throw MyException("Try set state to $newState but state record not found")
@@ -102,13 +102,13 @@ object UserState {
 
             val sum = state.count.toIntOrNull() ?: throw MyException("Try set state to $newState but state record not found")
 
-            bot.execute(SendMessage(chatId, "Enter sum end: ${state.count}").replyMarkup(ReplyKeyboardRemove()))
+            bot.execute(SendMessage(chatId, "Число понял: ${state.count}").replyMarkup(ReplyKeyboardRemove()))
 
             when (state.baseState) {
                 State.PayTo -> DbManager.doRecord(userName, userName, state.target, sum)
                 State.PayMe -> DbManager.doRecord(userName, state.target, userName, sum)
             }
-            bot.execute(SendMessage(chatId, "Please send comment:\n or press /start to enter main menu"))
+            bot.execute(SendMessage(chatId, "Как записать?\nесли никак - жми /start"))
         }
     }
 }
@@ -122,20 +122,20 @@ object MainMenu
     )
 
     private val actions = listOf<Action> (
-        Action("I pay", { chatId, userName, bot ->
+        Action("Я кому-то должен", { chatId, userName, bot ->
             UserState.setState(chatId, userName, bot, UserState.State.PayTo)
         }),
-        Action("Pay to me", { chatId, userName, bot ->
+        Action("Кто-то должен мне", { chatId, userName, bot ->
             UserState.setState(chatId, userName, bot, UserState.State.PayMe)
         }),
-        Action("My status", { chatId, userName, bot ->
-            bot.execute(SendMessage(chatId, "Balance ${DbManager.getBalance(userName)}"))
+        Action("Баланс", { chatId, userName, bot ->
+            bot.execute(SendMessage(chatId, "Твой счет: ${DbManager.getBalance(userName)}"))
         }),
-        Action("My log", { chatId, userName, bot ->
+        Action("История", { chatId, userName, bot ->
             val operationList = DbManager.getOperationList(userName).map {
                 "${it.target} : ${if(it.notAMaster) "-" else "+"}${it.sum} - ${it.comment}"
             }.joinToString("\n")
-            bot.execute(SendMessage(chatId, "Log:\n${operationList}"))
+            bot.execute(SendMessage(chatId, "История:\n${operationList}"))
         })
     )
 
@@ -153,7 +153,7 @@ object MainMenu
             )
         )
 
-        bot.execute(SendMessage(chatId, "What do you want?").replyMarkup(replyKeyboard))
+        bot.execute(SendMessage(chatId, "Какие проблемы?").replyMarkup(replyKeyboard))
     }
 }
 
