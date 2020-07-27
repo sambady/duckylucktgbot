@@ -3,3 +3,4 @@ db.url=jdbc:mysql://localhost:3306/<schema_name>?useUnicode=true&useJDBCComplian
 db.driver=com.mysql.cj.jdbc.Driver
 db.username=<login>
 db.password=<password>
+log_limit=10
