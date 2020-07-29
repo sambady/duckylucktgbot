@@ -141,6 +141,7 @@ object DbManager {
     }
 
     data class LogOperation(
+        val operationDate : String,
         val notAMaster : Boolean,
         val target : String,
         val sum : Int,
@@ -162,11 +163,12 @@ object DbManager {
             operations = Logs
                 .innerJoin(masterNameTable, {Logs.master}, { masterNameTable[Users.id] })
                 .innerJoin(slaveNameTable, {Logs.slave}, { slaveNameTable[Users.id] })
-                .slice(Logs.id, masterNameTable[Users.name], slaveNameTable[Users.name], Logs.sum, Logs.commentMessage)
+                .slice(Logs.operationTime, Logs.id, masterNameTable[Users.name], slaveNameTable[Users.name], Logs.sum, Logs.commentMessage)
                 .select({ Logs.master eq operatorId or (Logs.slave eq operatorId)})
                 .orderBy(Logs.id to SortOrder.DESC)
                 .limit(Config[Config.log_limit])
                 .map { LogOperation(
+                    operationDate = it[Logs.operationTime].toString(),
                     notAMaster = (userName != it[masterNameTable[Users.name]]),
                     target =    if(userName == it[masterNameTable[Users.name]]) {
                                     it[slaveNameTable[Users.name]]

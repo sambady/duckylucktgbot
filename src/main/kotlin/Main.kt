@@ -123,17 +123,17 @@ object MainMenu
 
     private val actions = listOf<Action> (
         Action("Я кому-то должен", { chatId, userName, bot ->
-            UserState.setState(chatId, userName, bot, UserState.State.PayTo)
+            UserState.setState(chatId, userName, bot, UserState.State.PayMe)
         }),
         Action("Кто-то должен мне", { chatId, userName, bot ->
-            UserState.setState(chatId, userName, bot, UserState.State.PayMe)
+            UserState.setState(chatId, userName, bot, UserState.State.PayTo)
         }),
         Action("Баланс", { chatId, userName, bot ->
             bot.execute(SendMessage(chatId, "Твой счет: ${DbManager.getBalance(userName)}"))
         }),
         Action("История", { chatId, userName, bot ->
             val operationList = DbManager.getOperationList(userName).map {
-                "${it.target} : ${if(it.notAMaster) "-" else "+"}${it.sum} - ${it.comment}"
+                "${it.operationDate}: ${it.target} : ${if(it.notAMaster) "-" else "+"}${it.sum} - ${it.comment}"
             }.joinToString("\n")
             bot.execute(SendMessage(chatId, "История:\n${operationList}"))
         })
