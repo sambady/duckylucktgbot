@@ -167,18 +167,19 @@ object DbManager {
                 .select({ Logs.master eq operatorId or (Logs.slave eq operatorId)})
                 .orderBy(Logs.id to SortOrder.DESC)
                 .limit(Config[Config.log_limit])
+                .sortedBy { it[Logs.id] }
                 .map { LogOperation(
-                    operationDate = it[Logs.operationTime].toString(),
+                    operationDate = it[Logs.operationTime].toString("dd.MM HH:mm"),
                     notAMaster = (userName != it[masterNameTable[Users.name]]),
                     target =    if(userName == it[masterNameTable[Users.name]]) {
-                                    it[slaveNameTable[Users.name]]
-                                }
-                                else {
-                                    it[masterNameTable[Users.name]]
-                                },
+                        it[slaveNameTable[Users.name]]
+                    }
+                    else {
+                        it[masterNameTable[Users.name]]
+                    },
                     sum = it[Logs.sum],
                     comment = it[Logs.commentMessage]
-                    )}
+                )}
                 //.map {"${it[masterNameTable[Users.name]]} -> ${it[slaveNameTable[Users.name]]} ${it[Logs.sum]} - ${it[Logs.commentMessage]} ".toString() }
                 .toMutableList()
         }

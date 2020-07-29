@@ -102,13 +102,18 @@ object UserState {
 
             val sum = state.count.toIntOrNull() ?: throw MyException("Try set state to $newState but state record not found")
 
-            bot.execute(SendMessage(chatId, "Число понял: ${state.count}").replyMarkup(ReplyKeyboardRemove()))
-
-            when (state.baseState) {
-                State.PayTo -> DbManager.doRecord(userName, userName, state.target, sum)
-                State.PayMe -> DbManager.doRecord(userName, state.target, userName, sum)
+            if(sum <= 0) {
+                bot.execute(SendMessage(chatId, "Что я должен сделать с этим числом ${state.count}? нажми /start и всё переделай").replyMarkup(ReplyKeyboardRemove()))
             }
-            bot.execute(SendMessage(chatId, "Как записать?\nесли никак - жми /start"))
+            else {
+                bot.execute(SendMessage(chatId, "Число понял: ${state.count}").replyMarkup(ReplyKeyboardRemove()))
+
+                when (state.baseState) {
+                    State.PayTo -> DbManager.doRecord(userName, userName, state.target, sum)
+                    State.PayMe -> DbManager.doRecord(userName, state.target, userName, sum)
+                }
+                bot.execute(SendMessage(chatId, "Как записать?\nесли никак - жми /start"))
+            }
         }
     }
 }
@@ -132,10 +137,32 @@ object MainMenu
             bot.execute(SendMessage(chatId, "Твой счет: ${DbManager.getBalance(userName)}"))
         }),
         Action("История", { chatId, userName, bot ->
+
+            val opListTmp = DbManager.getOperationList(userName)
+            val maxSumLength = opListTmp.maxBy { it.sum.toString().length }?.sum.toString().length
+            val maxNameLength = opListTmp.maxBy{it.target.length}?.target.toString().length
+
             val operationList = DbManager.getOperationList(userName).map {
-                "${it.operationDate}: ${it.target} : ${if(it.notAMaster) "-" else "+"}${it.sum} - ${it.comment}"
+                var sumStr = if(it.notAMaster) "-" + it.sum else "+" + it.sum
+                sumStr = sumStr.padEnd(maxSumLength + 1,' ')
+
+                var targetStr = it.target.padEnd(maxNameLength,' ')
+
+                "${it.operationDate}  ${sumStr}  ${targetStr}  ${it.comment}"
             }.joinToString("\n")
-            bot.execute(SendMessage(chatId, "История:\n${operationList}"))
+            bot.execute(SendMessage(chatId, "<pre>${operationList}</pre>").parseMode(ParseMode.HTML))
+
+
+            /*
+            val operationList = DbManager.getOperationList(userName).map {
+                "${it.operationDate}    ${if(it.notAMaster) "-" else "+"}${it.sum.toString().padStart(4,'\t')}    ${it.target}    ${it.comment}"
+            }.joinToString("\n")
+            bot.execute(SendMessage(chatId, "<pre>История:\n${operationList}</pre>").parseMode(ParseMode.HTML))*/
+            /*
+            val operationList = DbManager.getOperationList(userName).map {
+                "${it.operationDate}   ${it.target}  ${if(it.notAMaster) "-" else "+"}${it.sum}         ${it.comment}"
+            }.joinToString("\n")
+            bot.execute(SendMessage(chatId, "История:\n${operationList}"))*/
         })
     )
 
