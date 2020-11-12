@@ -74,7 +74,7 @@ object DbManager {
         var chatId : Long = 0
         transaction {
             chatId = Users.select({ Users.name eq userName })
-                .map { it[Users.id].toLong() }
+                .map { it[Users.chatId].toLong() }
                 .getOrNull(0)
                 ?: return@transaction
         }
