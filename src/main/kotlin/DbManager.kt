@@ -1,6 +1,7 @@
 package DuckyLuckTgBot
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 
@@ -8,6 +9,7 @@ object Users : Table() {
     val id = integer("id").autoIncrement().primaryKey()
     val name = varchar("name", length = 100).uniqueIndex()
     val balance = integer("balance").default(0)
+    val chatId = long("chat_id").default(0)
 }
 
 object Logs : Table() {
@@ -37,7 +39,7 @@ object DbManager {
         return ret
     }
 
-    fun tryAddUser(userName: String) : Boolean {
+    fun tryAddUser(userName: String, chatId : Long) : Boolean {
         connect()
         var ret = false
         transaction {
@@ -45,8 +47,14 @@ object DbManager {
                 Users.insert {
                     it[Users.name] = userName
                     it[Users.balance] = 0
+                    it[Users.chatId] = chatId
                 }
                 ret = true
+            }
+            else {
+                Users.update({Users.name eq userName}) {
+                    it[Users.chatId] = chatId
+                }
             }
         }
         return ret
@@ -59,6 +67,18 @@ object DbManager {
             ret = Users.select({ Users.name eq userName }).empty().not()
         }
         return ret
+    }
+
+    fun getChatId(userName : String) : Long {
+        connect()
+        var chatId : Long = 0
+        transaction {
+            chatId = Users.select({ Users.name eq userName })
+                .map { it[Users.id].toLong() }
+                .getOrNull(0)
+                ?: return@transaction
+        }
+        return chatId
     }
 
     fun doRecord(operator : String, master: String, slave: String, sum: Int) {

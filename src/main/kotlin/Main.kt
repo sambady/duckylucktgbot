@@ -109,8 +109,20 @@ object UserState {
                 bot.execute(SendMessage(chatId, "Число понял: ${state.count}").replyMarkup(ReplyKeyboardRemove()))
 
                 when (state.baseState) {
-                    State.PayTo -> DbManager.doRecord(userName, userName, state.target, sum)
-                    State.PayMe -> DbManager.doRecord(userName, state.target, userName, sum)
+                    State.PayTo -> {
+                        DbManager.doRecord(userName, userName, state.target, sum)
+                        val targetChatId = DbManager.getChatId(state.target)
+                        if(targetChatId != 0L) {
+                            bot.execute(SendMessage(chatId, "${userName} сказал что должен тебе ${state.count} денег"))
+                        }
+                    }
+                    State.PayMe -> {
+                        DbManager.doRecord(userName, state.target, userName, sum)
+                        val targetChatId = DbManager.getChatId(state.target)
+                        if(targetChatId != 0L) {
+                            bot.execute(SendMessage(chatId, "${userName} сказал что ты должен ему ${state.count} денег"))
+                        }
+                    }
                 }
                 bot.execute(SendMessage(chatId, "Как записать?\nесли никак - жми /start"))
             }
@@ -216,7 +228,7 @@ fun main(args: Array<String>) {
             try {
                 val userState = UserState.getState(userName)
                 if (text == "/start") {
-                    DbManager.tryAddUser(userName)
+                    DbManager.tryAddUser(userName, chatId)
                     UserState.clearUserState(userName)
                     MainMenu.sendToUser(chatId, userName, bot)
                 } else if (userState == UserState.State.None) {
