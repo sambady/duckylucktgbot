@@ -113,14 +113,14 @@ object UserState {
                         DbManager.doRecord(userName, userName, state.target, sum)
                         val targetChatId = DbManager.getChatId(state.target)
                         if(targetChatId != 0L) {
-                            bot.execute(SendMessage(chatId, "${userName} сказал что должен тебе ${state.count} денег"))
+                            bot.execute(SendMessage(targetChatId, "${userName} сказал что должен тебе ${state.count} денег"))
                         }
                     }
                     State.PayMe -> {
                         DbManager.doRecord(userName, state.target, userName, sum)
                         val targetChatId = DbManager.getChatId(state.target)
                         if(targetChatId != 0L) {
-                            bot.execute(SendMessage(chatId, "${userName} сказал что ты должен ему ${state.count} денег"))
+                            bot.execute(SendMessage(targetChatId, "${userName} сказал что ты должен ему ${state.count} денег"))
                         }
                     }
                 }
