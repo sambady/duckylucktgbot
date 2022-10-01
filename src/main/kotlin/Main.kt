@@ -151,8 +151,8 @@ object MainMenu
         Action("История", { chatId, userName, bot ->
 
             val opListTmp = DbManager.getOperationList(userName)
-            val maxSumLength = opListTmp.maxBy { it.sum.toString().length }?.sum.toString().length
-            val maxNameLength = opListTmp.maxBy{it.target.length}?.target.toString().length
+            val maxSumLength = opListTmp.maxByOrNull { it.sum.toString().length }?.sum.toString().length
+            val maxNameLength = opListTmp.maxByOrNull {it.target.length}?.target.toString().length
 
             val operationList = DbManager.getOperationList(userName).map {
                 var sumStr = if(it.notAMaster) "-" + it.sum else "+" + it.sum
@@ -191,7 +191,6 @@ object MainMenu
                 arrayOf(actions[2].name, actions[3].name)
             )
         )
-
         bot.execute(SendMessage(chatId, "Какие проблемы?").replyMarkup(replyKeyboard))
     }
 }

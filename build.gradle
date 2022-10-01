@@ -1,25 +1,37 @@
+buildscript {
+    ext {
+        kotlinVersion = '1.6.0'
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.50'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.3.50'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.0'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.6.0'
     id 'application'
     id 'java'
 }
-
 group 'DuckyLuckTgBot'
 version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
     maven { url "https://jitpack.io" }
-    maven { url "https://dl.bintray.com/kotlin/exposed/" }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
-    implementation "org.jetbrains.exposed:exposed:0.17.3"
+    implementation 'org.jetbrains.exposed:exposed-core:0.39.1'
+    implementation 'org.jetbrains.exposed:exposed-dao:0.39.1'
+    implementation 'org.jetbrains.exposed:exposed-jdbc:0.39.1'
+    implementation 'org.jetbrains.exposed:exposed-java-time:0.39.1'
 
-    implementation 'com.github.pengrad:java-telegram-bot-api:4.4.0'
+    implementation 'com.github.pengrad:java-telegram-bot-api:6.2.0'
 
     implementation "org.xerial:sqlite-jdbc:3.28.0"
     implementation "mysql:mysql-connector-java:8.0.17"

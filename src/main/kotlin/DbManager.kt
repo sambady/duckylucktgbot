@@ -2,23 +2,27 @@ package DuckyLuckTgBot
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.javatime.CurrentDate
+import org.jetbrains.exposed.sql.javatime.CurrentDateTime
+import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.joda.time.DateTime
+import java.time.format.DateTimeFormatter
+
 
 object Users : Table() {
-    val id = integer("id").autoIncrement().primaryKey()
+    val id = integer("id").autoIncrement()
     val name = varchar("name", length = 100).uniqueIndex()
     val balance = integer("balance").default(0)
     val chatId = long("chat_id").default(0)
 }
 
 object Logs : Table() {
-    val id = integer("id").autoIncrement().primaryKey()
+    val id = integer("id").autoIncrement()
     val operator = integer("operator")
     val master = integer("master")
     val slave = integer("slave")
     val sum = integer("value")
-    val operationTime = datetime("operation_time")
+    val operationTime = datetime("operation_time").defaultExpression(CurrentDateTime)
     val commentMessage = varchar("comment", length = 100).default("")
 }
 
@@ -114,7 +118,6 @@ object DbManager {
                 it[Logs.master] = masterId
                 it[Logs.slave] = slaveId
                 it[Logs.sum] = sum
-                it[Logs.operationTime] = DateTime.now()
             }
         }
     }
@@ -189,7 +192,7 @@ object DbManager {
                 .limit(Config[Config.log_limit])
                 .sortedBy { it[Logs.id] }
                 .map { LogOperation(
-                    operationDate = it[Logs.operationTime].toString("dd.MM HH:mm"),
+                    operationDate = it[Logs.operationTime].toLocalTime().format  (DateTimeFormatter.ISO_WEEK_DATE),
                     notAMaster = (userName != it[masterNameTable[Users.name]]),
                     target =    if(userName == it[masterNameTable[Users.name]]) {
                         it[slaveNameTable[Users.name]]
