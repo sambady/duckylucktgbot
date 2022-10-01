@@ -7,13 +7,14 @@ import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.format.DateTimeFormatter
+import javax.swing.text.StyledEditorKit.BoldAction
 
 
 object Users : Table() {
     val id = integer("id").autoIncrement()
     val name = varchar("name", length = 100).uniqueIndex()
     val balance = integer("balance").default(0)
-    val chatId = long("chat_id").default(0)
+    val chatId = long("chat_id").default(0).uniqueIndex()
 }
 
 object Logs : Table() {
@@ -43,22 +44,63 @@ object DbManager {
         return ret
     }
 
-    fun tryAddUser(userName: String, chatId : Long) : Boolean {
+    fun getNameByChatId(chatId : Long) : String?
+    {
+        connect()
+        var ret : String? = null
+        transaction {
+            ret = Users.select({ Users.chatId eq chatId })
+                .map { it[Users.name].toString() }
+                .getOrNull(0)
+                ?: return@transaction
+        }
+        return ret
+    }
+
+    fun isUserExists(chatId: Long) : Boolean
+    {
         connect()
         var ret = false
         transaction {
-            if (Users.select({ Users.name eq userName }).empty()) {
+            if (Users.select { Users.chatId eq chatId }.empty()) {
+                ret = true
+            }
+        }
+        return ret
+    }
+
+    fun isNameExists(name : String) : Boolean
+    {
+        connect()
+        var ret = false
+        transaction {
+            ret = Users.select { Users.name eq name }.empty().not()
+        }
+        return ret
+    }
+
+    fun tryAddOrUpdateUser(userName: String, chatId : Long) : Boolean {
+        connect()
+        var ret = false
+        transaction {
+            val chatIdExists = Users.select{Users.chatId eq chatId}.empty().not()
+            val userNameExists = Users.select{Users.name eq userName}.empty().not()
+            if(userNameExists)
+                return@transaction
+
+            if(chatIdExists) {
+                Users.update({ Users.chatId eq chatId }) {
+                    it[Users.name] = userName
+                }
+                ret = true
+            }
+            else {
                 Users.insert {
                     it[Users.name] = userName
                     it[Users.balance] = 0
                     it[Users.chatId] = chatId
                 }
                 ret = true
-            }
-            else {
-                Users.update({Users.name eq userName}) {
-                    it[Users.chatId] = chatId
-                }
             }
         }
         return ret
@@ -192,7 +234,7 @@ object DbManager {
                 .limit(Config[Config.log_limit])
                 .sortedBy { it[Logs.id] }
                 .map { LogOperation(
-                    operationDate = it[Logs.operationTime].toLocalTime().format  (DateTimeFormatter.ISO_WEEK_DATE),
+                    operationDate = it[Logs.operationTime].format(DateTimeFormatter.ofPattern("dd.MM HH:mm")),
                     notAMaster = (userName != it[masterNameTable[Users.name]]),
                     target =    if(userName == it[masterNameTable[Users.name]]) {
                         it[slaveNameTable[Users.name]]

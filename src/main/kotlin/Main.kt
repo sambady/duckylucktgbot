@@ -28,7 +28,14 @@ object UserState {
         var count : String
     )
 
+    private val chatIdWaitForName = mutableSetOf<Long>()
+    fun setWaitName(chatId: Long) = chatIdWaitForName.add(chatId)
+    fun isWaitForName(chatId : Long) = chatIdWaitForName.contains(chatId)
+    fun unsetWaitForName(chatId : Long) = chatIdWaitForName.remove(chatId)
+
+
     private val statesByUsername = mutableMapOf<String, ActionState>()
+
 
     fun getState(userName : String) = statesByUsername.get(userName)?.state ?: State.None
 
@@ -184,7 +191,7 @@ object MainMenu
         }
     }
 
-    fun sendToUser(chatId : Long, userName : String, bot : TelegramBot) {
+    fun sendToUser(chatId : Long, bot : TelegramBot) {
         val replyKeyboard = KotlinReplyKeyboardMarkup(
             arrayOf(
                 arrayOf(actions[0].name, actions[1].name),
@@ -221,48 +228,81 @@ fun main(args: Array<String>) {
             val chat = it?.callbackQuery()?.message()?.chat() ?: it?.message()?.chat()
 
             val chatId = chat?.id() ?: return@forEach
-            val userName = chat?.username() ?: return@forEach
+            //val userName = chat?.username() ?: return@forEach
             val text = it?.message()?.text() ?: return@forEach
 
             try {
-                val userState = UserState.getState(userName)
-                if (text == "/start") {
-                    DbManager.tryAddUser(userName, chatId)
-                    UserState.clearUserState(userName)
-                    MainMenu.sendToUser(chatId, userName, bot)
-                } else if (userState == UserState.State.None) {
-                    MainMenu.tryHandleMessage(text, chatId, userName, bot)
-                } else if (userState == UserState.State.PayTo || userState == UserState.State.PayMe) {
-                    if (!DbManager.checkUserExists(text)) {
-                        throw MyException("User $userName state $userState unknown target $text")
-                    }
-                    UserState.setTarget(userName, text)
-                    UserState.setState(chatId, userName, bot, UserState.State.WaitCount)
+                if(text == "/name") {
+                    UserState.setWaitName(chatId)
+                    bot.execute(SendMessage(chatId, "Как тебя зовут?"))
                 }
-                else if (userState == UserState.State.WaitCount) {
-                    if (text == "OK") {
-                        UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
+                else if (text == "/start") {
+                    val userName = DbManager.getNameByChatId(chatId)
+                    if(userName == null) {
+                        UserState.setWaitName(chatId)
+                        bot.execute(SendMessage(chatId, "Как тебя зовут?"))
                     }
                     else {
-                        val count = UserState.trySetCount(userName, text)
-                        if(count.second) {
-                            UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
-                        }
-                        else {
-                            bot.execute(SendMessage(chatId, count.first))
+                        UserState.clearUserState(userName)
+                        UserState.unsetWaitForName(chatId)
+                        MainMenu.sendToUser(chatId, bot)
+                    }
+                }
+                else if(UserState.isWaitForName(chatId)) {
+                    val name = text
+                    if(DbManager.isNameExists(name)) {
+                        bot.execute(SendMessage(chatId, "Такое имя уже существует. Давай еще раз"))
+
+                        // send name already exists
+                           // retry
+                           //if(DbManager.tryAddUser(name, chatId))
+                    }
+                    else {
+                        UserState.unsetWaitForName(chatId)
+                        if(DbManager.tryAddOrUpdateUser(name, chatId)) {
+                            bot.execute(SendMessage(chatId, "Ты добавлен. тебя зовут ${name}"))
+                            MainMenu.sendToUser(chatId, bot)
                         }
                     }
-                } else if (userState == UserState.State.WaitComment) {
-                    if (text.isNotEmpty()) {
-                        DbManager.addComment(userName, text)
-                        UserState.clearUserState(userName)
-                        MainMenu.sendToUser(chatId, userName, bot)
+                }
+                else {
+                    val userName = DbManager.getNameByChatId(chatId) ?: return@forEach
+
+                    val userState = UserState.getState(userName)
+                    if (userState == UserState.State.None) {
+                        MainMenu.tryHandleMessage(text, chatId, userName, bot)
+                    } else if (userState == UserState.State.PayTo || userState == UserState.State.PayMe) {
+                        if (!DbManager.checkUserExists(text)) {
+                            throw MyException("User $userName state $userState unknown target $text")
+                        }
+                        UserState.setTarget(userName, text)
+                        UserState.setState(chatId, userName, bot, UserState.State.WaitCount)
+                    } else if (userState == UserState.State.WaitCount) {
+                        if (text == "OK") {
+                            UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
+                        } else {
+                            val count = UserState.trySetCount(userName, text)
+                            if (count.second) {
+                                UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
+                            } else {
+                                bot.execute(SendMessage(chatId, count.first))
+                            }
+                        }
+                    } else if (userState == UserState.State.WaitComment) {
+                        if (text.isNotEmpty()) {
+                            DbManager.addComment(userName, text)
+                            UserState.clearUserState(userName)
+                            MainMenu.sendToUser(chatId, bot)
+                        }
                     }
                 }
             }
             catch(exception : MyException) {
-                UserState.clearUserState(userName)
-                MainMenu.sendToUser(chatId, userName, bot)
+                val userName = DbManager.getNameByChatId(chatId)
+                if(userName != null) {
+                    UserState.clearUserState(userName)
+                }
+                MainMenu.sendToUser(chatId, bot)
             }
         }
 
