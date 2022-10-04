@@ -4,6 +4,8 @@ package DuckyLuckTgBot
 import com.pengrad.telegrambot.TelegramBot
 import com.pengrad.telegrambot.UpdatesListener
 import com.pengrad.telegrambot.model.request.*
+import com.pengrad.telegrambot.request.DeleteMessage
+import com.pengrad.telegrambot.request.EditMessageText
 import com.pengrad.telegrambot.request.SendMessage
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
@@ -25,7 +27,8 @@ object UserState {
         var state : State,
         var baseState : State,
         var target : String,
-        var count : String
+        var count : String,
+        var countMessageId : Int = 0
     )
 
     private val chatIdWaitForName = mutableSetOf<Long>()
@@ -45,31 +48,6 @@ object UserState {
         val state = statesByUsername.get(userName) ?: throw MyException("State for $userName not found")
         state.target = target
         return true
-    }
-
-    fun trySetCount(userName : String, text : String) : Pair<String, Boolean>  {
-        val state = statesByUsername.get(userName) ?: throw MyException("State for $userName not found")
-
-        var isEnd = false
-
-        if(text == "<<") {
-            if(state.count.isNotEmpty()) {
-                state.count = state.count.substring(0, state.count.length - 1)
-            }
-        }
-        else {
-            if(text.toIntOrNull() != null) {
-                if(text.length > 1) {
-                    state.count = text
-                    isEnd = true
-                }
-                else {
-                    state.count = state.count + text
-                }
-            }
-        }
-
-        return Pair(state.count, isEnd)
     }
 
     fun setState(chatId : Long, userName : String, bot : TelegramBot, newState : State) {
@@ -134,6 +112,38 @@ object UserState {
                 bot.execute(SendMessage(chatId, "Как записать?\nесли никак - жми /start"))
             }
         }
+    }
+
+    fun trySetCount(bot : TelegramBot, chatId: Long, userName : String, text : String) : Pair<String, Boolean>  {
+        val state = statesByUsername.get(userName) ?: throw MyException("State for $userName not found")
+
+        var isEnd = false
+
+        if(text == "<<") {
+            if(state.count.isNotEmpty()) {
+                state.count = state.count.substring(0, state.count.length - 1)
+            }
+        }
+        else {
+            if(text.toIntOrNull() != null) {
+                if(text.length > 1) {
+                    state.count = text
+                    isEnd = true
+                }
+                else {
+                    state.count = state.count + text
+                }
+            }
+        }
+
+        if(state.countMessageId == 0) {
+            state.countMessageId = bot.execute(SendMessage(chatId, state.count)).message().messageId()
+        }
+        else {
+            bot.execute(EditMessageText(chatId, state.countMessageId, state.count))
+        }
+
+        return Pair(state.count, isEnd)
     }
 }
 
@@ -230,6 +240,8 @@ fun main(args: Array<String>) {
             val chatId = chat?.id() ?: return@forEach
             //val userName = chat?.username() ?: return@forEach
             val text = it?.message()?.text() ?: return@forEach
+            val messageId = it?.message()?.messageId() ?: return@forEach
+
 
             try {
                 if(text == "/name") {
@@ -281,11 +293,10 @@ fun main(args: Array<String>) {
                         if (text == "OK") {
                             UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
                         } else {
-                            val count = UserState.trySetCount(userName, text)
+                            bot.execute(DeleteMessage(chatId, messageId))
+                            val count = UserState.trySetCount(bot, chatId, userName, text)
                             if (count.second) {
                                 UserState.setState(chatId, userName, bot, UserState.State.WaitComment)
-                            } else {
-                                bot.execute(SendMessage(chatId, count.first))
                             }
                         }
                     } else if (userState == UserState.State.WaitComment) {
