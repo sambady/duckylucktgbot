@@ -1,13 +1,11 @@
 package DuckyLuckTgBot
 
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.javatime.CurrentDate
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.format.DateTimeFormatter
-import javax.swing.text.StyledEditorKit.BoldAction
+
 
 
 object Users : Table() {
@@ -15,6 +13,14 @@ object Users : Table() {
     val name = varchar("name", length = 100).uniqueIndex()
     val balance = integer("balance").default(0)
     val chatId = long("chat_id").default(0).uniqueIndex()
+}
+
+object UsersRelations : Table("users_relations") {
+    val source_user_id = integer("source_user_id")
+    val target_user_id = integer("target_user_id")
+    val balance = integer("balance")
+
+    override val primaryKey = PrimaryKey(source_user_id, target_user_id)
 }
 
 object Logs : Table() {
@@ -31,7 +37,7 @@ object DbManager {
     fun Init() {
         connect()
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(Users, Logs)
+            SchemaUtils.createMissingTablesAndColumns(Users, Logs, UsersRelations)
         }
     }
 
@@ -155,6 +161,22 @@ object DbManager {
                 }
             }
 
+            UsersRelations.update({
+                (UsersRelations.source_user_id eq masterId) and (UsersRelations.target_user_id eq slaveId)}
+            ) {
+                with(SqlExpressionBuilder) {
+                    it.update(Users.balance, Users.balance + sum)
+                }
+            }
+
+            UsersRelations.update({
+                (UsersRelations.source_user_id eq slaveId) and (UsersRelations.target_user_id eq masterId)}
+            ) {
+                with(SqlExpressionBuilder) {
+                    it.update(Users.balance, Users.balance - sum)
+                }
+            }
+
             Logs.insert {
                 it[Logs.operator] = operatorId
                 it[Logs.master] = masterId
@@ -203,6 +225,22 @@ object DbManager {
                 ?: 0
         }
         return balance
+    }
+
+    fun getBalanceExt(userName : String) : Map<String, Int>? {
+        connect()
+
+        var ret : Map<String, Int>? = null
+        transaction {
+            val userId = Users.select({Users.name eq userName}).map {it[Users.id]}.getOrNull(0)
+            if(userId != null) {
+                ret = UsersRelations.leftJoin(Users, {UsersRelations.target_user_id}, {Users.id})
+                    .slice(Users.name, UsersRelations.balance)
+                    .select({ UsersRelations.source_user_id eq userId })
+                    .map { Pair(it[Users.name], it[UsersRelations.balance])}.toMap()
+            }
+        }
+        return ret
     }
 
     data class LogOperation(

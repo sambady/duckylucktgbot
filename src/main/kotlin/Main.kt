@@ -163,7 +163,11 @@ object MainMenu
             UserState.setState(chatId, userName, bot, UserState.State.PayTo)
         }),
         Action("Баланс", { chatId, userName, bot ->
-            bot.execute(SendMessage(chatId, "Твой счет: ${DbManager.getBalance(userName)}"))
+            var message = "Твой счет: ${DbManager.getBalance(userName)}\n"
+            DbManager.getBalanceExt(userName)?.forEach {
+                message += "\n${it.key}:\t\t${it.value}"
+            }
+            bot.execute(SendMessage(chatId, message))
         }),
         Action("История", { chatId, userName, bot ->
 
