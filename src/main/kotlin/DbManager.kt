@@ -1,6 +1,7 @@
 package DuckyLuckTgBot
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -133,6 +134,32 @@ object DbManager {
         return chatId
     }
 
+    fun updateUserRelations(source_user_id : Int, target_user_id : Int, balanceChange : Int)
+    {
+        if(UsersRelations
+                .select {
+                    (UsersRelations.source_user_id eq source_user_id) and (UsersRelations.target_user_id eq target_user_id)
+                }
+                .empty())
+        {
+            UsersRelations.insert {
+                it[UsersRelations.source_user_id] = source_user_id
+                it[UsersRelations.target_user_id] = target_user_id
+                it[balance] = balanceChange
+            }
+        }
+        else {
+            UsersRelations.update({
+                (UsersRelations.source_user_id eq source_user_id) and (UsersRelations.target_user_id eq target_user_id)
+            }
+            ) {
+                with(SqlExpressionBuilder) {
+                    it.update(UsersRelations.balance, UsersRelations.balance + balanceChange)
+                }
+            }
+        }
+    }
+
     fun doRecord(operator : String, master: String, slave: String, sum: Int) {
         connect()
         transaction {
@@ -161,21 +188,8 @@ object DbManager {
                 }
             }
 
-            UsersRelations.update({
-                (UsersRelations.source_user_id eq masterId) and (UsersRelations.target_user_id eq slaveId)}
-            ) {
-                with(SqlExpressionBuilder) {
-                    it.update(Users.balance, Users.balance + sum)
-                }
-            }
-
-            UsersRelations.update({
-                (UsersRelations.source_user_id eq slaveId) and (UsersRelations.target_user_id eq masterId)}
-            ) {
-                with(SqlExpressionBuilder) {
-                    it.update(Users.balance, Users.balance - sum)
-                }
-            }
+            updateUserRelations(masterId, slaveId, sum)
+            updateUserRelations(slaveId, masterId, -sum)
 
             Logs.insert {
                 it[Logs.operator] = operatorId
